@@ -1,25 +1,43 @@
+from gym.utils.save_video import save_video
+
 import numpy as np
 
-def agent_walk_path(env, q_table):
+def agent_walk_path_vedio(env, q_table, times=1):
     
     # 宣告參數
-    done = False
-    epochs = 0
-    total_reward = 0
+    output_epoch = []
+    total_reward = []
 
-    env.reset()
+    for i in range(times):
 
-    while not done:
+        done = False
+        epochs = 0
+        reward_t = 0
 
-        # 現在環境的代號
-        state = env.s
-    
-        # 現在最大q值的action
-        action = np.argmax(q_table[state])
+        env.reset()
 
-        state, reward, done, _, _ = env.step(action)
+        while not done:
 
-        epochs += 1
-        total_reward += reward
+            # 現在環境的代號
+            state = env.s
+        
+            # 現在最大q值的action
+            action = np.argmax(q_table[state])
 
-    return epochs, total_reward
+            state, reward, done, _, _ = env.step(action)
+
+            epochs += 1
+            reward_t += reward
+        
+        output_epoch.append(epochs)
+        total_reward.append(reward_t)
+
+        save_video(
+                env.render(),
+                "videos",
+                fps=env.metadata["render_fps"],
+                step_starting_index=0,
+                episode_index=i
+            )
+
+    return output_epoch, total_reward

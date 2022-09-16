@@ -1,7 +1,7 @@
 from model.Value_Base import Q_learning
-from model.funs import agent_walk_path
+from model.funs import agent_walk_path_vedio
+
 import gym
-import numpy as np
 
 if __name__ == '__main__':
     
@@ -13,9 +13,14 @@ if __name__ == '__main__':
     Q_model = Q_learning()
     q_table = Q_model.train_step(env=env)
     
-    test_env = gym.make("Taxi-v3", render_mode="human")
+    env.close()
 
-    epoch, reward = agent_walk_path(test_env, q_table)
+    test_env = gym.make("Taxi-v3", render_mode="rgb_array_list")
 
+    epoch, reward = agent_walk_path_vedio(test_env, q_table, times=5)
+    
     print(f"Epochs:", epoch)
     print(f"Reward:", reward)
+
+    test_env.close()
+    
