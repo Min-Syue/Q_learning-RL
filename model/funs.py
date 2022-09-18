@@ -2,7 +2,7 @@ from gym.utils.save_video import save_video
 
 import numpy as np
 
-def agent_walk_path_vedio(env, q_table, times=1):
+def agent_walk_path_vedio(env, q_table, file_name, limit_epoch=200):
     
     # 宣告參數
     done = False
@@ -11,8 +11,8 @@ def agent_walk_path_vedio(env, q_table, times=1):
 
     env.reset()
 
-    while not done:
-
+    while not done and epochs < limit_epoch:
+        
         # 現在環境的代號
         state = env.s
         
@@ -26,7 +26,7 @@ def agent_walk_path_vedio(env, q_table, times=1):
         
     save_video(
             env.render(),
-            "videos",
+            file_name,
             fps=env.metadata["render_fps"],
             step_starting_index=0,
             episode_index=0
