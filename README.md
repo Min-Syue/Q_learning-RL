@@ -12,4 +12,4 @@
 >![](https://github.com/Min-Syue/Q_learning-Sarsa-RL/blob/master/Taxi_video_QL.gif)
 
 ## Sarsa 結果
->![](https://github.com/Min-Syue/Q_learning-Sarsa-RL/blob/master/Taxi_video_QL.gif)
+>![](https://github.com/Min-Syue/Q_learning-Sarsa-RL/blob/master/Taxi_video_Sarsa.gif)
