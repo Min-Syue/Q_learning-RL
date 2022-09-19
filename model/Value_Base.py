@@ -2,35 +2,40 @@ from tqdm import tqdm
 from keras import Model, Sequential
 from keras.layers import Dense, Embedding, Reshape
 from keras.optimizers import Adam
+from collections import deque
 
 import random
 import numpy as np
+import time
 
 class DeepQ_learning:
-    def __init__(self, enviroment, optimizer, _gamma, _epsilon, _epsilon_min, _maxlen):
+    def __init__(self, enviroment, optimizer, gamma=0.9, epsilon=1, epsilon_min=0.3, epsilon_decay_number=0.005, maxlen=200):
         
         # Initialize atributes
         self._state_size = enviroment.observation_space.n
         self._action_size = enviroment.action_space.n
         self._optimizer = optimizer
+        self._env = enviroment
         
-        self.expirience_replay = deque(maxlen=_maxlen)
+        # 設定要存多少數據
+        self.expirience_replay = deque(maxlen=maxlen)
         
-        # Initialize discount and exploration rate
-        self.gamma = _gamma
-        self.epsilon = _epsilon
-        self.epsilon_min = _epsilon_min
-        self.epsilon_decay = 0.005
+        # 初始化參數
+        self._gamma = gamma
+        self._epsilon = epsilon
+        self._epsilon_min = epsilon_min
+        self._epsilon_decay = epsilon_decay_number
         
-        # Build networks
-        self.q_network = self._build_compile_model()
-        self.target_network = self._build_compile_model()
+        # 建立神經網路模型
+        self._q_network = self.build_compile_model()
+        self._target_network = self.build_compile_model()
         self.alighn_target_model()
 
+    # 紀錄每次運作的數據
     def store(self, state, action, reward, next_state, terminated):
         self.expirience_replay.append((state, action, reward, next_state, terminated))
     
-    def _build_compile_model(self):
+    def build_compile_model(self):
         
         model = Sequential()
         model.add(Embedding(self._state_size, 10, input_length=1)) # Embedding層將每個不同的狀態表示成一個10維且唯一的狀態。
@@ -41,26 +46,87 @@ class DeepQ_learning:
         model.add(Dense(self._action_size, activation='linear'))
         
         model.compile(loss='mse', optimizer=self._optimizer)
+
+        model.summary()
+
         return model
 
+    # 將q_network的參數，設定給target_network
     def alighn_target_model(self):
-        self.target_network.set_weights(self.q_network.get_weights())
+        self._target_network.set_weights(self._q_network.get_weights())
     
+    # agent的行動，有一定機率會跳脫原本思路，隨機選取
     def act(self, state):
         
-        if random.uniform(0, 1) <= self.epsilon:
-            print(f"The epsilon is {self.epsilon}, Random action")
-            return env.action_space.sample()
+        if random.uniform(0, 1) <= self._epsilon:
+            return self._env.action_space.sample()
         
-        print(f"The epsilon is {self.epsilon}, Network action")
-        q_values = self.q_network.predict(state)
+        q_values = self._q_network.predict(state)
         return np.argmax(q_values[0])
 
+    # 這個是網路上找到的一個招，說要遞減每次跳脫原本思路的機率
     def update_epsilon(self, episode):
         
-        if self.epsilon > self.epsilon_min:
-            self.epsilon= self.epsilon_min + (1-self.epsilon_min) * np.exp(-self.epsilon_decay * episode) 
+        if self.epsilon > self._epsilon_min:
+            self.epsilon= self._epsilon_min + (1-self._epsilon_min) * np.exp(-self._epsilon_decay * episode) 
     
+    # 開始模擬環境且訓練模型
+    def train_step(self, num_of_episodes, alighn_weights, limit_stop=200, batch_size=32, training_steps=15, epsilon_decay=False):
+
+        time_start = time.time()
+
+        history_per_epiReward = []
+
+        for e in tqdm(range(0, num_of_episodes)):
+            
+            # 重設gym的環境
+            state, _ = self._env.reset()
+            # print(state)
+            state = np.reshape(state, [1, 1])
+            
+            # 初始化參數
+            reward = 0
+            total_reward = 0
+            terminated = False
+            
+            for timestep in range(limit_stop):
+
+                # Run Action
+                action = self.act(state)
+
+                # Take action    
+                next_state, reward, terminated, _, _ = self._env.step(action) 
+                
+                #if next_state == state and action != 5 and action != 6:
+                #   reward = -5
+                
+                total_reward += reward
+                 
+                next_state = np.reshape(next_state, [1, 1])
+                self.store(state, action, reward, next_state, terminated)
+                
+                state = next_state
+           
+                if len(self.expirience_replay) > batch_size and timestep % training_steps == 0:
+                    self.retrain(batch_size)
+                
+                if timestep % alighn_weights == 0:
+                    self.alighn_target_model()
+                
+            history_per_epiReward.append(total_reward)
+            
+            self.alighn_target_model()
+            
+            if epsilon_decay:
+                self.update_epsilon(e)
+            
+        time_end = time.time()
+
+        time_c= time_end - time_start 
+        
+        return history_per_epiReward, time_c
+
+    # 訓練模型的實際步驟
     def retrain(self, batch_size):
         
         # 從過去的歷程中，隨機提取batch_size大小出來做訓練
@@ -68,7 +134,7 @@ class DeepQ_learning:
         
         for state, action, reward, next_state, terminated in minibatch:
             
-            target = self.q_network.predict(state)
+            target = self._q_network.predict(state, verbose=0)
             
             # print(target)
             
@@ -76,12 +142,12 @@ class DeepQ_learning:
                 # print(reward)
                 target[0][action] = reward
             else:
-                t = self.target_network.predict(next_state)
-                target[0][action] = reward + self.gamma * np.amax(t)
+                t = self._target_network.predict(next_state, verbose=0)
+                target[0][action] = reward + self._gamma * np.amax(t)
                 
             # print(target)
             
-            self.q_network.fit(state, target, epochs=1, verbose=0)
+            self._q_network.fit(state, target, epochs=1, verbose=0)
 
 class Sarsa:
 

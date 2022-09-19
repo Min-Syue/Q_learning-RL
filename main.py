@@ -1,5 +1,6 @@
-from model.Value_Base import Q_learning, Sarsa
+from model.Value_Base import Q_learning, Sarsa, DeepQ_learning
 from model.funs import agent_walk_path_vedio
+from keras.optimizers import Adam
 
 import gym
 
@@ -17,12 +18,10 @@ if __name__ == '__main__':
     Q_model = Q_learning()
     q_table = Q_model.train_step(env=env)
     '''
-
+    '''
     # 宣告Sarsa模型 並做訓練
     Sarsa_model = Sarsa()
     q_table = Sarsa_model.train_step(env=env)
-
-    env.close()
 
     test_env = gym.make("Taxi-v3", render_mode="rgb_array_list")
 
@@ -32,4 +31,12 @@ if __name__ == '__main__':
     print(f"Reward:", reward)
 
     test_env.close()
+
+    '''
+
+    DQL = DeepQ_learning(enviroment=env, optimizer=Adam(10e-3))
+    DQL.train_step(50000, 50, 32, 15, True)
+    env.close()
+
+
     
