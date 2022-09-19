@@ -9,4 +9,4 @@
 
 
 ## Q-learning 結果
-![](https://github.com/Min-Syue/Q_learning-RL/blob/master/Taxi_video.gif)
+>![](https://github.com/Min-Syue/Q_learning-RL/blob/master/Taxi_video.gif)
